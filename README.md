@@ -112,3 +112,19 @@ Granular scopes (`atproto`, `repo:com.kirbyjayes.bookshelf.experimental.review`,
 ### Deferred
 
 - Stale cookie is not cleared when `restore` fails (server components cannot set cookies).
+- Session cookie cannot be revoked before its 14-day `exp` (stateless HMAC). A copied cookie still fails at `restore(did)` once the stored session is deleted. Fix needs a server-side session table (Sprint 6).
+- Logging in as a second DID in the same browser leaves the first DID's `auth_session` row (and refresh token) in place, unrevoked. Low impact; expires with the refresh token.
+- `/login` has no rate limit, so `auth_state` can be grown for up to an hour per flood. Sprint 6.
+- Pending decision: `loadMe` ignores the HTTP status of its `getSession` call (only a thrown error counts as a dead session). Whether `getSession` succeeds under the granular scopes is unchecked.
+
+### Sprint 1 code review (2026-11-04, `/code-review` medium)
+
+Fixed:
+- Login CSRF / session fixation: `/login` sets a random nonce as both the `state` option and a `bs_login` cookie; `/callback` requires them to match and signs out the just-stored session on mismatch.
+- `loadMe`: the `getSession` call is inside try/catch (PDS outage returns the signed-out view, not a 500).
+- `/api/me` no longer returns the raw `getSession` body (email etc.); only `did`, `handle`, `pds`.
+- Logout shows an error if the remote token revoke fails (the local session is deleted regardless).
+
+Refuted:
+- Dev `APP_ORIGIN` fixed to `127.0.0.1`: intended (cookies do not cross from `localhost`; loopback redirect URI must be an IP literal).
+- `requestLock` multi-process race during deploys: one machine and one volume, `strategy = 'immediate'` replaces rather than overlaps. Passing `fn` as both `then` handlers is cosmetic.
