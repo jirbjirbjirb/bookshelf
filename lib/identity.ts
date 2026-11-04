@@ -14,8 +14,13 @@ export async function loadMe(did: string, forceRefresh = false): Promise<Me | nu
   } catch {
     return null
   }
-  const res = await session.fetchHandler('/xrpc/com.atproto.server.getSession')
-  const sessionInfo = res.ok ? await res.json() : { status: res.status }
+  let sessionInfo: unknown
+  try {
+    const res = await session.fetchHandler('/xrpc/com.atproto.server.getSession')
+    sessionInfo = res.ok ? await res.json() : { status: res.status }
+  } catch {
+    return null // PDS unreachable or token refresh failed: treat the session as unavailable
+  }
 
   let handle: string | null = null
   let pds: string | null = null
