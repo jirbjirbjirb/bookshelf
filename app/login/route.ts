@@ -4,6 +4,9 @@ import { APP_ORIGIN, LOGIN_NONCE_COOKIE, SCOPE } from "@/lib/config";
 import { getOAuthClient } from "@/lib/oauth";
 import { cookieOptions } from "@/lib/session";
 
+// authorize() also accepts service URLs; only handles and DIDs are valid here.
+const HANDLE_OR_DID = /^(?:did:[a-z]+:[a-zA-Z0-9._:%-]+|[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)+)$/;
+
 const back = (error: string) =>
   Response.redirect(`${APP_ORIGIN}/?error=${encodeURIComponent(error)}`, 303);
 
@@ -13,7 +16,7 @@ export async function POST(req: Request) {
   const handle = String(form.get("handle") ?? "")
     .trim()
     .replace(/^@/, "");
-  if (!handle || handle.length > 253)
+  if (handle.length > 253 || !HANDLE_OR_DID.test(handle))
     return back("Enter a handle, for example alice.bsky.social");
   try {
     // nonce goes to the auth server as app state and into a cookie; /callback requires both to match

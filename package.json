@@ -10,6 +10,7 @@
     "check:metadata": "node scripts/check-metadata.mjs"
   },
   "dependencies": {
+    "@atproto-labs/fetch-node": "^0.4.4",
     "@atproto/identity": "^0.5.20",
     "@atproto/oauth-client-node": "^0.5.13",
     "@atproto/oauth-types": "^0.7.7",

@@ -1,5 +1,6 @@
 import { NodeOAuthClient, type RuntimeLock } from "@atproto/oauth-client-node";
 import { atprotoLoopbackClientMetadata } from "@atproto/oauth-types";
+import { safeFetchWrap } from "@atproto-labs/fetch-node";
 import {
   APP_ORIGIN,
   CLIENT_ID,
@@ -57,6 +58,7 @@ export function getOAuthClient(): NodeOAuthClient {
     stateStore,
     sessionStore,
     requestLock,
+    fetch: safeFetchWrap({ allowImplicitRedirect: true }), // block hijacking of /login and passing malicious fetch urls to auth server
     allowHttp: OAUTH_MODE === "dev" && APP_ORIGIN.startsWith("http://"),
   });
   return g.__oauthClient;
