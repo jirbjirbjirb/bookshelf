@@ -2,9 +2,10 @@ import { NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 import { APP_ORIGIN, COOKIE_NAME } from '@/lib/config'
 import { getOAuthClient } from '@/lib/oauth'
-import { verifySession } from '@/lib/session'
+import { isSameOrigin, verifySession } from '@/lib/session'
 
-export async function POST() {
+export async function POST(req: Request) {
+  if (!isSameOrigin(req)) return new Response('Forbidden', { status: 403 })
   const did = verifySession((await cookies()).get(COOKIE_NAME)?.value)
   let error: string | null = null
   if (did) {

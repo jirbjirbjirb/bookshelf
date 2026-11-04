@@ -120,7 +120,7 @@ Granular scopes (`atproto`, `repo:com.kirbyjayes.bookshelf.experimental.review`,
 ### Sprint 1 code review (2026-11-04, `/code-review` medium)
 
 Fixed:
-- Login CSRF / session fixation: `/login` sets a random nonce as both the `state` option and a `bs_login` cookie; `/callback` requires them to match and signs out the just-stored session on mismatch.
+- Login CSRF / session fixation: `/login` sets a random nonce as both the `state` option and a `bs_login` cookie; `/callback` requires them to match and signs out the just-stored session on mismatch. `/login` and `/logout` reject any POST whose `Origin` is not `APP_ORIGIN`, so another site cannot plant the nonce or clear the session cookie.
 - `loadMe`: the `getSession` call is inside try/catch (PDS outage returns the signed-out view, not a 500).
 - `/api/me` no longer returns the raw `getSession` body (email etc.); only `did`, `handle`, `pds`.
 - Logout shows an error if the remote token revoke fails (the local session is deleted regardless).

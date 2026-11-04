@@ -1,6 +1,6 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { cookies } from "next/headers";
-import { COOKIE_NAME, OAUTH_MODE, SESSION_MAX_AGE_S } from "./config";
+import { APP_ORIGIN, COOKIE_NAME, OAUTH_MODE, SESSION_MAX_AGE_S } from "./config";
 
 // session_secret is a private env used to sign cookies
 function secret(): string {
@@ -53,6 +53,11 @@ export function verifySession(
 
 export async function getSessionDid(): Promise<string | null> {
   return verifySession((await cookies()).get(COOKIE_NAME)?.value);
+}
+
+// compare APP_ORIGIN, never request.url, which is unreliable behind Fly's proxy.
+export function isSameOrigin(req: Request): boolean {
+  return req.headers.get("origin") === APP_ORIGIN;
 }
 
 export const cookieOptions = {
