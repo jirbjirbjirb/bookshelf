@@ -39,4 +39,5 @@ export function loopbackClientId(redirectUri: string, scope: string): string {
 }
 
 export const COOKIE_NAME = "bs_session";
+export const LOGIN_NONCE_COOKIE = "bs_login"; // binds a login attempt to the browser that started it
 export const SESSION_MAX_AGE_S = 14 * 24 * 60 * 60; // public client sessions cap at 2 weeks

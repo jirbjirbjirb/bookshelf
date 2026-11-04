@@ -1,5 +1,8 @@
-import { APP_ORIGIN, SCOPE } from "@/lib/config";
+import { randomBytes } from "node:crypto";
+import { NextResponse } from "next/server";
+import { APP_ORIGIN, LOGIN_NONCE_COOKIE, SCOPE } from "@/lib/config";
 import { getOAuthClient } from "@/lib/oauth";
+import { cookieOptions } from "@/lib/session";
 
 const back = (error: string) =>
   Response.redirect(`${APP_ORIGIN}/?error=${encodeURIComponent(error)}`, 303);
@@ -13,8 +16,15 @@ export async function POST(req: Request) {
   if (!handle || handle.length > 253)
     return back("Enter a handle, for example alice.bsky.social");
   try {
-    const url = await getOAuthClient().authorize(handle, { scope: SCOPE });
-    return Response.redirect(url.toString(), 303);
+    // nonce goes to the auth server as app state and into a cookie; /callback requires both to match
+    const nonce = randomBytes(16).toString("base64url");
+    const url = await getOAuthClient().authorize(handle, {
+      scope: SCOPE,
+      state: nonce,
+    });
+    const res = NextResponse.redirect(url.toString(), 303);
+    res.cookies.set(LOGIN_NONCE_COOKIE, nonce, { ...cookieOptions, maxAge: 600 });
+    return res;
   } catch (err) {
     console.error("login failed", err);
     return back("Could not start login for that handle");
