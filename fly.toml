@@ -6,6 +6,7 @@ primary_region = 'iad'
 [env]
   PORT = '3000'
   DB_FILE = '/data/app.db'
+  OAUTH_MODE = 'prod'
 
 [[mounts]]
   source = 'bookshelf_data'
