@@ -73,10 +73,12 @@ Experiment run in scratchpad (macOS arm64): next 16.4.4, react 19.3.1, better-sq
 ### Open items before Sprint 0 closes
 
 - [x] Infra: Fly app, volume, domain and TLS, two test accounts.
-- [ ] Placeholder page live on `https://bookshelf.kirbyjayes.com`.
-- [ ] Metadata check script (200, `application/json`, no redirect, `client_id` equals URL).
-- [ ] `/code-review` run.
-- [ ] Architecture Q&A with Kirby answered unaided.
+- [x] Placeholder page live on `https://bookshelf.kirbyjayes.com`.
+- [x] Metadata check script (200, `application/json`, no redirect, `client_id` equals URL).
+- [x] `/code-review` run.
+- [x] Architecture Q&A with Kirby answered unaided.
+
+Sprint 0 gate and checks confirmed by Kirby (2026-11-05). Items marked **UNCONFIRMED** above remain open until the sprint that depends on them.
 
 ### Sprint 0 code review (2026-11-04)
 
