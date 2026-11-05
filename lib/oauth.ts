@@ -50,8 +50,25 @@ export const requestLock: RuntimeLock = async (key, fn) => {
 
 const g = globalThis as unknown as { __oauthClient?: NodeOAuthClient };
 
-// creates new client following atProto NodeOAuthClient type
-// creating this at runtime and using global this make it possible to use OAuth in dev, otherwise it could just be client = new NodeOAuthClient({...})
+// Returns the single NodeOAuthClient for this process (created on first call, cached on globalThis
+// so dev hot reloads reuse it instead of building a new one per module reload).
+//
+// Our code never calls the db functions in lib/stores.ts directly. The client calls them
+// itself, through the stateStore and sessionStore passed in below. Which store method runs when:
+//
+//   authorize()  (app/login/route.ts)    stateStore.set(internalKey, {verifier, dpopKey, issuer, appState = nonce})
+//   callback()   (app/callback/route.ts) stateStore.get(internalKey), then stateStore.del (one use, blocks replay)
+//                                        unknown/expired key throws here, before our nonce check
+//                                        then revoke(sub) of any old session: sessionStore.get/del
+//                                        then sessionStore.set(did, {tokens, dpopKey})
+//   restore()    (lib/identity.ts)       sessionStore.get(did); if the token is expired (or forced),
+//                                        refresh inside requestLock, then sessionStore.set(did, newTokens)
+//                                        a revoked/unrefreshable session -> sessionStore.del(did)
+//   revoke()     (app/logout/route.ts)   sessionStore.get(did), revoke at the auth server, then sessionStore.del(did)
+//   session.signOut() (callback nonce mismatch) same as revoke() for that DID
+//
+// Two different "state" values exist: the internal key (row key in auth_state, also sent to the
+// auth server as `state`) and our nonce (appState, returned by callback() as `state`, compared to the cookie).
 export function getOAuthClient(): NodeOAuthClient {
   g.__oauthClient ??= new NodeOAuthClient({
     clientMetadata: clientMetadata(),

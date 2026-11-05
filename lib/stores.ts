@@ -39,7 +39,8 @@ function getStatements(): Stmts {
   return cached;
 }
 
-// get/set/delete for state table
+// get/set/delete for state table (auth_state): short-lived rows for one login attempt.
+// Called only by the OAuth client (see getOAuthClient in lib/oauth.ts): set by authorize(), get + del by callback().
 export const stateStore: NodeSavedStateStore = {
   // get rows, delete expired instead of returning them
   get(key) {
@@ -70,7 +71,9 @@ export const stateStore: NodeSavedStateStore = {
   },
 };
 
-// get/set/del for session table
+// get/set/del for session table (auth_session): one long-lived row per signed-in DID (tokens + DPoP key).
+// Called only by the OAuth client: set by callback() and after each token refresh, get by restore()/revoke(),
+// del by revoke()/signOut() and when a session turns out to be revoked or unrefreshable.
 export const sessionStore: NodeSavedSessionStore = {
   get(did) {
     const row = getStatements().sessGet.get(did) as
