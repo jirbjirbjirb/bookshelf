@@ -7,22 +7,30 @@
     "build": "next build",
     "postbuild": "cp -r .next/static .next/standalone/.next/ && cp -r public .next/standalone/",
     "start": "HOSTNAME=127.0.0.1 node .next/standalone/server.js",
-    "check:metadata": "node scripts/check-metadata.mjs"
+    "check:metadata": "node scripts/check-metadata.mjs",
+    "lex:gen": "node scripts/gen-lexicon.mjs",
+    "test": "vitest run"
   },
   "dependencies": {
     "@atproto-labs/fetch-node": "^0.4.4",
+    "@atproto/api": "^0.30.0",
     "@atproto/identity": "^0.5.20",
+    "@atproto/lexicon": "^0.7.19",
     "@atproto/oauth-client-node": "^0.5.13",
     "@atproto/oauth-types": "^0.7.7",
+    "@atproto/syntax": "^0.7.7",
+    "@atproto/xrpc": "^0.8.16",
     "better-sqlite3": "^13.0.3",
     "next": "^16.4.4",
     "react": "^19.3.1",
     "react-dom": "^19.3.1"
   },
   "devDependencies": {
+    "@atproto/lex-cli": "^0.10.16",
     "@types/better-sqlite3": "^9.6.0",
     "@types/node": "^26.6.6",
     "@types/react": "^19.3.0",
-    "typescript": "^7.0.2"
+    "typescript": "^7.0.2",
+    "vitest": "^5.1.0"
   }
 }
