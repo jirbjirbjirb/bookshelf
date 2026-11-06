@@ -130,3 +130,64 @@ Fixed:
 Refuted:
 - Dev `APP_ORIGIN` fixed to `127.0.0.1`: intended (cookies do not cross from `localhost`; loopback redirect URI must be an IP literal).
 - `requestLock` multi-process race during deploys: one machine and one volume, `strategy = 'immediate'` replaces rather than overlaps. Passing `fn` as both `then` handlers is cosmetic.
+
+## Sprint 2 notes (lexicon and record writes)
+
+### Running
+
+- `npm run lex:gen` regenerates `lib/lexicon/` from `lexicons/`. Run it after any lexicon change. Do not edit `lib/lexicon/` by hand.
+- `npm test` runs the unit tests (vitest).
+- `/reviews` is the bare page for creating, editing and deleting your own reviews.
+
+### Lexicon limits
+
+Limits can change until the Sprint 6 rename, because only test records exist under the experimental NSID.
+
+| Field | Limit |
+|---|---|
+| `bookId` | 3-32 bytes; app also requires `OL<number>W`, since lexicons have no pattern constraint |
+| `title` | 1-300 graphemes, 3,000 bytes |
+| `authors` | 0-20 names, each up to 128 graphemes, 1,280 bytes |
+| `coverId` | integer, minimum 1 |
+| `text` | 1-5,000 graphemes, 50,000 bytes |
+| `rating` | integer, 1-5 |
+| `createdAt` | datetime, unchanged by edits |
+| `crosspost` | at-uri, written in Sprint 7 |
+
+### Design notes
+
+- `lex gen-api` output is adjusted by `scripts/gen-lexicon.mjs`: `index.ts` is removed (its client wrapper does not compile without vendored `com.atproto.repo` schemas), and `.js` import suffixes are stripped (Turbopack does not resolve them to `.ts`, verified by build failure).
+- Writes use `@atproto/api` `Agent` over the restored OAuth session. `validate` is left unset because the PDS does not know this lexicon; `lib/review-record.ts` validates before any request.
+- `repo` always comes from the session DID. `ownReviewRkey` also refuses any URI whose authority is not exactly that DID, whose collection is wrong, or whose rkey is not a TID.
+- Edit and delete pass the CID the page loaded as `swapRecord`, so a stale tab gets a conflict instead of overwriting or deleting a newer version. Edit reads the record first because `putRecord` replaces all fields; only `text` and `rating` change.
+- The edit form is keyed by CID: React's form reset would otherwise restore the select's first default and the next save would write the old rating.
+- `REVIEW_NSID` comes from the generated lexicon and also builds the OAuth scope, so the Sprint 6 rename cannot leave them out of step.
+
+### Verified 2026-11-05
+
+- Local and on `https://bookshelf.kirbyjayes.com`, against `bookshelf-test.bsky.social` on its real PDS: 29 browser checks pass in both, with repo state read independently through public `listRecords` and `getRecord`. The script is not in the repo (automated end-to-end tests are out of v1 scope). Server Actions pass Next's origin check behind Fly's proxy.
+- `InvalidSwap` and `RecordNotFound` are the error names the PDS actually returns (server log).
+- The first browser run caught a real bug: `swapRecord` used the CID read at save time, so stale tabs overwrote newer saves. Fixed by sending the loaded CID.
+
+### Sprint 2 code review (2026-11-05, `/code-review` medium)
+
+Fixed:
+- Edit form's rating select restored its old default after a save (form keyed by CID).
+- Listed reviews at non-TID rkeys could not be edited or deleted (list now applies the same check; the lexicon's key type is `tid`).
+- Delete had no stale guard (now sends `swapRecord`).
+- Every `restore()` failure read as an expired session (now only `TokenRefreshError`, `TokenInvalidError`, `TokenRevokedError` and a 401).
+- NSID defined twice (see design notes).
+- `/reviews` had no link home for a dead session.
+
+Deferred:
+- Typed input is lost when a submit fails. Sprint 3 builds the real form with client state.
+- `?error=` text can be spoofed by a crafted link (React escaping prevents XSS, not misleading text). Sprint 3 for `/reviews`; `/` is the existing Sprint 1 pattern and stays open.
+- `/reviews` stops at 50 records with no notice. Sprint 4 adds cursor pagination.
+- Records failing validation are hidden with no notice and cannot be deleted from the app. Only reachable through other clients or schema changes. Sprint 4.
+
+### Sprint 2 Q&A (2026-11-06)
+
+Passed by Kirby's decision after three rounds, answered unaided. Lexicon enforcement, CIDs and `swapRecord`, ownership and scopes held up on new scenarios. The remaining gap is tracing a failure through to what the user sees on screen; Sprint 3 rebuilds those paths.
+
+Found during Q&A, not fixed:
+- After the Sprint 6 rename, sessions from before the deploy hold the old scope and nothing tells the user to sign in again. A refused save may show the generic PDS error, and `/reviews` may show "No reviews yet" if the read succeeds. Status code and read behavior untested. Sprint 6.

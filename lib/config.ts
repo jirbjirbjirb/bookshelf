@@ -1,4 +1,5 @@
 import { buildAtprotoLoopbackClientId } from "@atproto/oauth-types";
+import { ids } from "./lexicon/lexicons";
 
 export const PUBLIC_URL = "https://bookshelf.kirbyjayes.com";
 
@@ -6,7 +7,9 @@ export const PUBLIC_URL = "https://bookshelf.kirbyjayes.com";
 export const OAUTH_MODE: "dev" | "prod" =
   process.env.OAUTH_MODE === "prod" ? "prod" : "dev";
 
-const REVIEW_NSID = "com.kirbyjayes.bookshelf.experimental.review"; // where records are kept
+// Where records are kept. Comes from the generated lexicon so the collection written and the OAuth
+// scope that authorizes it cannot drift apart.
+export const REVIEW_NSID = ids.ComKirbyjayesBookshelfExperimentalReview;
 
 const GRANULAR_SCOPE = [
   "atproto",
