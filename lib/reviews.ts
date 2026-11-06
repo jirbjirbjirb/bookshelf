@@ -42,7 +42,7 @@ async function withAgent<T>(
       if (err.status === 401) return { ok: false, error: SESSION_GONE };
       if (err.error === "InvalidSwap") return { ok: false, error: STALE };
       if (err.error === "RecordNotFound")
-        return { ok: false, error: "That review no longer exists." };
+        return { ok: false, error: "That review no longer exists. Reload the page." };
     }
     return { ok: false, error: "Your PDS could not complete the request." };
   }
