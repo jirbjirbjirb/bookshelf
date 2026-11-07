@@ -17,8 +17,8 @@ Live at [bookshelf.kirbyjayes.com](https://bookshelf.kirbyjayes.com). This is a 
 | Feature | Status |
 |---|---|
 | Sign in with a Bluesky account | Live |
-| Write, edit and delete reviews, stored in your own repo | Live, with a basic form |
-| Search for a book and review it, with covers | In progress |
+| Search for a book and review it, with covers | Live |
+| Edit and delete your reviews, stored in your own repo | Live |
 | Public profile pages listing anyone's reviews by handle | Planned |
 | Book pages showing every review of a book, across users | Planned |
 | Optionally cross-post a review to Bluesky | Planned |

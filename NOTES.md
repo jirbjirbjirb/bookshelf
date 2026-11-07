@@ -221,7 +221,7 @@ Sources: openlibrary.org/dev/docs/api/search, /developers/api, /dev/docs/api/cov
 ### Verified 2026-11-06
 
 - Local production build against `bookshelf-test.bsky.social` on its real PDS: 58 browser checks pass, with repo state read independently through public `listRecords`. The script is not in the repo (automated end-to-end tests are out of v1 scope). Covers search, no hits, refused query, Open Library outage while signed in, publish, edit, delete, signed-out and offline submits, and stale tabs.
-- Not yet run on `https://bookshelf.kirbyjayes.com`.
+- Live on `https://bookshelf.kirbyjayes.com` (Fly release v6): the same run passes 57 checks. The outage check is local only, because it needs a server pointed at a dead address.
 - `npm test`: 71 unit tests pass.
 
 ### Sprint 3 code review (2026-11-06, `/code-review` medium)
@@ -243,3 +243,11 @@ Deferred:
 - Review dates show the UTC calendar day, not the reader's. Sprint 4, where dates become public.
 - Cleanup: the `<article className="book">` markup repeats in three files (Sprint 4 adds a fourth use, so extract it then); clip limits in `lib/openlibrary.ts` have no lexicon sync test.
 - A user can write several reviews of the same book; the plan does not forbid it. Revisit in Sprint 5 for the book page.
+
+### Sprint 3 Q&A (2026-11-07)
+
+Passed by Kirby's decision after five questions, answered unaided. The failure-to-screen gap from Sprint 2 came up again: `guarded()` was placed on the server and credited with catching a failure that `withAgent` returns as a value. It was answered correctly when re-asked (handled failures resolve with an error value; only a rejected action reaches `guarded()`'s `catch`). Form reset, frozen CIDs, the lookup design and the cache held up.
+
+Carried forward:
+- Sprint 5 needs a design for checking records from other clients against Open Library at about 1 request/second, such as looking up each `bookId` once, caching it, and showing Open Library's title rather than the record's.
+- Untested: publishing with a session revoked on the PDS has not been run in a browser. Traced from the code only (`SESSION_GONE` from a token error or a 401 in `withAgent`). The browser run covered a cleared cookie and going offline.
