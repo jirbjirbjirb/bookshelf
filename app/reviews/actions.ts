@@ -3,35 +3,44 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createReview, deleteReview, editReview } from "@/lib/reviews";
-import type { Result } from "@/lib/review-record";
+import type { ActionState, Result } from "@/lib/review-record";
 import { getSessionDid } from "@/lib/session";
 
-// Server Actions are public POST endpoints: each one checks the session itself.
-async function requireDid(): Promise<string> {
+// Failures come back as state rather than a redirect, so the form stays mounted with the user's text.
+// Server Actions are public POST endpoints: each one checks the session itself, through here.
+async function run(
+  write: (did: string) => Promise<Result<unknown>>,
+): Promise<ActionState> {
   const did = await getSessionDid();
-  if (!did) redirect(`/?error=${encodeURIComponent("Sign in first")}`);
-  return did;
-}
-
-// redirect() works by throwing, so it stays out here and never inside the lib's try/catch.
-function finish(result: Result<unknown>): never {
-  if (!result.ok)
-    redirect(`/reviews?error=${encodeURIComponent(result.error)}`);
+  if (!did) return { error: "You are signed out. Sign in again." };
+  const result = await write(did);
+  if (!result.ok) return { error: result.error };
   revalidatePath("/reviews");
-  redirect("/reviews");
+  return null;
 }
 
 const uriOf = (form: FormData) => String(form.get("uri") ?? "");
 const cidOf = (form: FormData) => String(form.get("cid") ?? "");
 
-export async function createReviewAction(form: FormData) {
-  finish(await createReview(await requireDid(), form));
+export async function createReviewAction(
+  _prev: ActionState,
+  form: FormData,
+): Promise<ActionState> {
+  const state = await run((did) => createReview(did, form));
+  if (state) return state;
+  redirect("/reviews"); // throws, so it stays outside run()
 }
 
-export async function editReviewAction(form: FormData) {
-  finish(await editReview(await requireDid(), uriOf(form), cidOf(form), form));
+export async function editReviewAction(
+  _prev: ActionState,
+  form: FormData,
+): Promise<ActionState> {
+  return run((did) => editReview(did, uriOf(form), cidOf(form), form));
 }
 
-export async function deleteReviewAction(form: FormData) {
-  finish(await deleteReview(await requireDid(), uriOf(form), cidOf(form)));
+export async function deleteReviewAction(
+  _prev: ActionState,
+  form: FormData,
+): Promise<ActionState> {
+  return run((did) => deleteReview(did, uriOf(form), cidOf(form)));
 }

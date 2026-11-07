@@ -1,0 +1,58 @@
+body {
+  max-width: 44rem;
+  margin: 0 auto;
+  padding: 1rem;
+  font-family: system-ui, sans-serif;
+  line-height: 1.5;
+}
+nav a {
+  margin-right: 1rem;
+}
+label textarea {
+  display: block;
+  width: 100%;
+}
+[role="alert"] {
+  color: #b00020;
+}
+.book {
+  display: flex;
+  gap: 1rem;
+  padding: 1rem 0;
+  border-top: 1px solid #ddd;
+}
+.book h2 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+.book p {
+  margin: 0.25rem 0;
+}
+.book-body {
+  flex: 1;
+  min-width: 0;
+}
+.cover {
+  flex: none;
+  width: 4rem;
+  height: 6rem;
+  object-fit: cover;
+}
+.cover-none {
+  background: #eee;
+}
+.meta,
+.count {
+  color: #666;
+  font-size: 0.875rem;
+}
+.count.over {
+  color: #b00020;
+}
+.review-text {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.inline {
+  display: inline;
+}

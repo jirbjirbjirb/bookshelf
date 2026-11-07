@@ -24,9 +24,6 @@ export default async function Home({
           <p>
             <code>{me.did}</code>
           </p>
-          <p>
-            <a href="/reviews">Your reviews</a>
-          </p>
           <form action="/logout" method="post">
             <button type="submit">Log out</button>
           </form>

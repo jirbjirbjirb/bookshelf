@@ -10,9 +10,14 @@ import {
 export type { ReviewRecord };
 export type Result<T> = { ok: true; value: T } | { ok: false; error: string };
 
+// What a form's server action hands back through useActionState. Null means no error.
+export type ActionState = { error: string } | null;
+
 // Lexicons have no pattern constraint, so the work-key shape is checked here.
 const BOOK_ID = /^OL[1-9][0-9]*W$/;
 const WHOLE_NUMBER = /^[0-9]+$/;
+
+export const isBookId = (id: string): boolean => BOOK_ID.test(id);
 
 const field = (form: FormData, name: string): string => {
   const v = form.get(name);
@@ -46,7 +51,7 @@ export function reviewFromForm(
   now = new Date(),
 ): Result<ReviewRecord> {
   const bookId = field(form, "bookId");
-  if (!BOOK_ID.test(bookId))
+  if (!isBookId(bookId))
     return { ok: false, error: "Book id must look like OL45804W" };
 
   const coverId = optionalInt(field(form, "coverId"), "Cover id");
