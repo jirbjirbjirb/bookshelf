@@ -251,3 +251,81 @@ Passed by Kirby's decision after five questions, answered unaided. The failure-t
 Carried forward:
 - Sprint 5 needs a design for checking records from other clients against Open Library at about 1 request/second, such as looking up each `bookId` once, caching it, and showing Open Library's title rather than the record's.
 - Untested: publishing with a session revoked on the PDS has not been run in a browser. Traced from the code only (`SESSION_GONE` from a token error or a 401 in `withAgent`). The browser run covered a cleared cookie and going offline.
+
+## Sprint 4 notes (profile pages)
+
+### Running
+
+- `/u/<handle>` is public and needs no session. `/u/<handle>?cursor=` and `/reviews?cursor=` are the older pages.
+- `/book/<work key>` is a stub with book details only, so review links have somewhere to go. Sprint 5 adds the reviews. Stub confirmed by Kirby (2026-11-17).
+
+### Sprint 0 items settled
+
+Read from the compiled packages (`@atproto/identity` 0.5.20, `@atproto-labs/fetch-node`) and run locally on 2026-11-07:
+
+- SSRF protection is real runtime behavior: handle HTTP resolution and `did:plc` / `did:web` fetches all go through `safeFetchWrap`. `did:web:localhost` and `did:web:169.254.169.254` are refused. Redirects are refused for DID fetches.
+- `did.resolve*` honors the timeout (`AbortSignal.timeout`). In `handle.resolve` the timeout covers HTTP only and DNS has none, so `lib/profile.ts` bounds the whole call at 5 s.
+- `handle.resolve` never throws: a missing handle and a failed lookup both return `undefined`. A DNS outage therefore reads as "not found", and the page wording allows for it.
+- Nothing in the package checks handles in both directions; `resolveAtprotoData` returns the document's claim unverified. `resolveProfile` does the check.
+- `isValidHandle` ignores the TLD, and the safe fetch does not block `.internal` by name, only by resolved IP range. `parseHandle` adds `isValidTld`. The IP-range block has not been tested on Fly itself.
+
+### PDS behavior (bsky.social PDS, live 2026-11-07)
+
+- `listRecords` returns descending record keys by default, so no sort is needed. A record at a non-TID key (`not-a-tid`) sorted first, ahead of TIDs.
+- A cursor is returned even on the last page (33 records, limit 100). This is why `loadReviewPage` asks for one more record before offering "Older reviews".
+- A garbage cursor is a 200 with no records, not an error. An unknown repo is a 400 `InvalidRequest`.
+
+### Design notes
+
+- The profile path uses no session: official resolvers, then `listRecords` through the safe fetch with `redirect: "error"`, a 10 s timeout and a 4 MiB cap (the 512 KiB default can be exceeded by 25 long reviews).
+- The DID document must name the requested handle. Otherwise any domain could point DNS at someone's DID and show that account's reviews under its own name.
+- `/u/[handle]` has no `loading.tsx` on purpose: `notFound()` only sends a 404 before streaming starts (Next docs, `not-found.js`).
+- `lib/repo-page.ts` takes the network call as a parameter, so the public page (safe fetch) and `/reviews` (OAuth agent) paginate identically.
+- `readReviews` puts anything failing a check in `hidden`: lexicon, `bookId` pattern, parseable `createdAt`, URI naming this DID, TID key. It passes only known fields onward, because the XRPC client turns `$link` and blobs into class instances that React cannot serialize. Edits re-read the stored record, so unknown fields survive a save.
+- Hidden records are counted on profiles and listed on `/reviews` with Delete. A record at a non-TID key cannot be deleted from the app, because `ownReviewRkey` refuses it.
+- Dates render as the UTC day on the server, and `LocalDate` corrects them to the reader's day after hydration.
+
+Closes from earlier sprints: `/reviews` 50-record limit; hidden invalid records (except deleting non-TID keys); UTC review dates; repeated book card markup.
+
+### Verified 2026-11-07
+
+- Local production build against both test accounts on their real PDS: 36 browser checks pass, with repo state read independently through `listRecords`, and all test records deleted afterwards. The script is not in the repo. Covers signed-out and signed-in profiles, real OAuth login and publish, pagination at 35 and exactly 25 records, all hidden-record cases, a `$link` field through list and edit, reader time zones, cursor edge cases, and not-found pages.
+- `npm test`: 126 unit tests pass. The handle check in both directions is unit-tested with a mocked resolver only; a live test needs a domain pointing at another account's DID.
+- Not yet run on `https://bookshelf.kirbyjayes.com`.
+
+### Sprint 4 code review (2026-11-07, `/code-review` medium)
+
+Fixed:
+- A `createdAt` the lexicon accepts but `Date` cannot parse showed "Invalid Date" (now hidden).
+- An unknown `$link` or blob field could break `/reviews` for that account (now only known fields are passed on). Traced by the review; the fix was then run against a real `$link` record.
+- Permanent resolver failures (bad DID, unsupported method, bad document, 410) read as a temporary outage (now not found).
+- An over-long `next` cursor linked back to page one.
+- A 400 on a cursor request blamed the account (now says the link is invalid, with a link to the newest page).
+- A non-OK response body was not cancelled, so a PDS could hold the connection open.
+- `/book/[id]` had no not-found page or `h1`.
+- The year line repeated across three `BookCard` uses (now a prop).
+
+Kept:
+- The one-record lookahead costs a second request per page. The live run shows the cursor alone proves nothing, and skipping it on short pages could hide older reviews on a PDS that returns short pages.
+- The review body markup appears in both `/u/[handle]` and `ReviewItem`. They differ (edit state), and it is four lines.
+
+Deferred:
+- `/u/[handle]` resolves identity on every view with no cache or rate limit, and each view makes several outgoing requests. A `didCache` and rate limit belong in Sprint 6, with `/login` and `/search`.
+- A DID document with no handle or PDS throws a plain `Error`, so it shows as "try again" rather than not found. Telling it apart needs message matching.
+- Malformed percent-encoding (`/u/bad%E0%A4%A`) returns a plain 500 on `/u` and `/book`, with no sign of it reaching the app. Not an ordinary invalid handle.
+- Not-found pages render blank without JavaScript (the status is still 404).
+- There is no form for looking up another user's handle, only the URL and a link to your own profile. The plan does not ask for one.
+- Sorting uses the record key, which the author's client can choose, so a crafted TID can pin a review to the top. The plan's notes for later cover first-seen sorting.
+
+### Sprint 4 Q&A (2026-11-17)
+
+Passed by Kirby's decision after five questions. Answered unaided: the handle check stops at `lib/profile.ts:73`; the one-record lookahead and why it fails open; first-seen ordering as the only one the author cannot fake. Answered when re-asked:
+- Two-way handle check: first framed as handles changing owners. The point is that a domain owner can claim any DID, so the DID document must agree.
+- Safe fetch: the account owner controls the PDS URL, which makes it SSRF. A redirect gets past an IP check made on the first URL only, hence `redirect: "error"`.
+- No `loading.tsx`: first answered as a permanent loading state. Streaming sends a 200 before `notFound()` runs.
+- Ordering: first answered as `createdAt` not changing on edit. The reason is that the author writes it, and the record key has the same weakness.
+
+Not covered: which records `readReviews` hides, and why `lib/repo-page.ts` takes the network call as a parameter.
+
+Carried forward:
+- Exit criteria not yet run on `https://bookshelf.kirbyjayes.com` (Sprint 6 runs all S1 to S5 criteria live).

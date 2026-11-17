@@ -56,3 +56,9 @@ label textarea {
 .inline {
   display: inline;
 }
+.book h2 {
+  overflow-wrap: anywhere;
+}
+.pager a {
+  margin-right: 1rem;
+}

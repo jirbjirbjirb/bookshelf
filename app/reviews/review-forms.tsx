@@ -7,7 +7,8 @@ import {
   type FormEvent,
 } from "react";
 import { unstable_rethrow } from "next/navigation";
-import { Cover } from "@/app/cover";
+import { BookCard } from "@/app/book-card";
+import { LocalDate } from "@/app/local-date";
 import type { Book } from "@/lib/openlibrary";
 import type { ActionState } from "@/lib/review-record";
 import type { StoredReview } from "@/lib/reviews";
@@ -226,24 +227,48 @@ export function ReviewItem(review: StoredReview) {
   const [editing, setEditing] = useState(false);
 
   return (
+    <BookCard
+      coverId={value.coverId}
+      title={value.title}
+      authors={value.authors}
+      href={`/book/${value.bookId}`}
+    >
+      <p className="meta">
+        <LocalDate iso={value.createdAt} />
+      </p>
+      {editing ? (
+        <EditForm {...review} onClose={() => setEditing(false)} />
+      ) : (
+        <>
+          {value.rating !== undefined && <p>Rating: {value.rating} / 5</p>}
+          <p className="review-text">{value.text}</p>
+          <button type="button" onClick={() => setEditing(true)}>
+            Edit
+          </button>{" "}
+          <DeleteControl uri={uri} cid={cid} />
+        </>
+      )}
+    </BookCard>
+  );
+}
+
+// A record in this collection that is not a valid review, written by another client or under an older
+// schema. A record at a key that is not a TID cannot be deleted here, since the delete guard refuses it.
+export function HiddenRecord({
+  uri,
+  cid,
+  deletable,
+}: {
+  uri: string;
+  cid: string;
+  deletable: boolean;
+}) {
+  return (
     <article className="book">
-      <Cover id={value.coverId} />
       <div className="book-body">
-        <h2>{value.title}</h2>
-        {value.authors.length > 0 && <p>{value.authors.join(", ")}</p>}
-        <p className="meta">{value.createdAt.slice(0, 10)}</p>
-        {editing ? (
-          <EditForm {...review} onClose={() => setEditing(false)} />
-        ) : (
-          <>
-            {value.rating !== undefined && <p>Rating: {value.rating} / 5</p>}
-            <p className="review-text">{value.text}</p>
-            <button type="button" onClick={() => setEditing(true)}>
-              Edit
-            </button>{" "}
-            <DeleteControl uri={uri} cid={cid} />
-          </>
-        )}
+        <p>This record is not a valid review, so it cannot be shown.</p>
+        <p className="meta review-text">{uri}</p>
+        {deletable && <DeleteControl uri={uri} cid={cid} />}
       </div>
     </article>
   );

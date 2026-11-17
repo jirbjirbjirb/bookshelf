@@ -11,12 +11,11 @@ import {
   applyEdit,
   ownReviewRkey,
   reviewFromForm,
-  validReview,
   type Result,
-  type ReviewRecord,
 } from "./review-record";
+import { loadReviewPage, type ReviewPage } from "./repo-page";
 
-export type StoredReview = { uri: string; cid: string; value: ReviewRecord };
+export type { StoredReview } from "./review-record";
 
 const SESSION_GONE = "Your session has expired. Sign in again.";
 const STALE = "This review changed since it was loaded. Reload and try again.";
@@ -116,23 +115,21 @@ export async function deleteReview(
   });
 }
 
-// For the signed-in user's bare management page. Public profiles arrive in Sprint 4.
+// For the signed-in user's management page. Public profiles read through lib/profile.ts instead.
 export async function listOwnReviews(
   did: string,
-): Promise<Result<StoredReview[]>> {
-  return withAgent(did, async (agent) => {
-    const { data } = await agent.com.atproto.repo.listRecords({
-      repo: did,
-      collection: REVIEW_NSID,
-      limit: 50,
-    });
-    const reviews: StoredReview[] = [];
-    for (const { uri, cid, value } of data.records) {
-      const review = validReview(value);
-      // The lexicon's key type is tid, so a record at another rkey is as invalid as a bad field.
-      if (review && ownReviewRkey(uri, did).ok)
-        reviews.push({ uri, cid, value: review });
-    }
-    return { ok: true, value: reviews };
-  });
+  cursor: string | undefined,
+): Promise<Result<ReviewPage>> {
+  return withAgent(did, async (agent) => ({
+    ok: true,
+    value: await loadReviewPage(did, cursor, async (c, limit) => {
+      const { data } = await agent.com.atproto.repo.listRecords({
+        repo: did,
+        collection: REVIEW_NSID,
+        limit,
+        cursor: c,
+      });
+      return data;
+    }),
+  }));
 }

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { loadMe } from "@/lib/identity";
 import { getSessionDid } from "@/lib/session";
 
@@ -24,6 +25,11 @@ export default async function Home({
           <p>
             <code>{me.did}</code>
           </p>
+          {me.handle && (
+            <p>
+              <Link href={`/u/${me.handle}`}>Your public profile</Link>
+            </p>
+          )}
           <form action="/logout" method="post">
             <button type="submit">Log out</button>
           </form>

@@ -8,6 +8,8 @@ import {
 // Pure logic only: no network, no session. Everything here runs before a request reaches the PDS.
 
 export type { ReviewRecord };
+export type StoredReview = { uri: string; cid: string; value: ReviewRecord };
+export type RepoRecord = { uri: string; cid: string; value: unknown };
 export type Result<T> = { ok: true; value: T } | { ok: false; error: string };
 
 // What a form's server action hands back through useActionState. Null means no error.
@@ -109,4 +111,47 @@ export function ownReviewRkey(uri: string, did: string): Result<string> {
   if (parsed.collection !== REVIEW_NSID || !isValidTid(parsed.rkey))
     return { ok: false, error: "Invalid review URI" };
   return { ok: true, value: parsed.rkey };
+}
+
+function knownFields(r: ReviewRecord): ReviewRecord {
+  return {
+    $type: r.$type,
+    bookId: r.bookId,
+    title: r.title,
+    authors: r.authors,
+    ...(r.coverId !== undefined && { coverId: r.coverId }),
+    text: r.text,
+    ...(r.rating !== undefined && { rating: r.rating }),
+    createdAt: r.createdAt,
+    ...(r.crosspost !== undefined && { crosspost: r.crosspost }),
+  };
+}
+
+// Splits a listRecords page into reviews that can be shown and records that cannot. Everything a repo
+// returns is untrusted, and a record that fails any check goes to `hidden`, so pages can say so rather
+// than drop it silently. The lexicon has no pattern constraint, so bookId is checked here: it becomes a
+// link. Its datetime check also accepts forms that Date cannot parse, and the date has to be displayed.
+// The URI must name this DID, so a PDS cannot pass off another account's record as this one's.
+//
+// Only known fields are kept. These values reach client components, and the XRPC client can turn an
+// unknown field into a class instance (CID, BlobRef), which React refuses to serialize. Edits are not
+// affected: applyEdit reads the stored record again, so unknown fields survive a save.
+export function readReviews(
+  records: RepoRecord[],
+  did: string,
+): { reviews: StoredReview[]; hidden: RepoRecord[] } {
+  const reviews: StoredReview[] = [];
+  const hidden: RepoRecord[] = [];
+  for (const record of records) {
+    const value = validReview(record.value);
+    if (
+      value &&
+      isBookId(value.bookId) &&
+      !Number.isNaN(Date.parse(value.createdAt)) &&
+      ownReviewRkey(record.uri, did).ok
+    )
+      reviews.push({ uri: record.uri, cid: record.cid, value: knownFields(value) });
+    else hidden.push(record);
+  }
+  return { reviews, hidden };
 }
