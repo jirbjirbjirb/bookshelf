@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Cover } from "@/app/cover";
+import { BookCard } from "@/app/book-card";
 import { getBook } from "@/lib/openlibrary";
 import { getSessionDid } from "@/lib/session";
 import { NewReviewForm } from "../review-forms";
@@ -45,14 +45,12 @@ export default async function NewReview({
   return (
     <main>
       <h1>Write a review</h1>
-      <article className="book">
-        <Cover id={book.coverId} />
-        <div className="book-body">
-          <h2>{book.title}</h2>
-          {book.authors.length > 0 && <p>{book.authors.join(", ")}</p>}
-          {book.year !== undefined && <p className="meta">{book.year}</p>}
-        </div>
-      </article>
+      <BookCard
+        coverId={book.coverId}
+        title={book.title}
+        authors={book.authors}
+        year={book.year}
+      />
       <NewReviewForm book={book} />
       <p>{BACK}</p>
     </main>

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   applyEdit,
   ownReviewRkey,
+  readReviews,
   reviewFromForm,
   validReview,
 } from "./review-record";
@@ -228,5 +229,83 @@ describe("validReview", () => {
   it("returns null for an invalid record", () => {
     expect(validReview({ $type: NSID, text: "x" })).toBeNull();
     expect(validReview(null)).toBeNull();
+  });
+});
+
+describe("readReviews", () => {
+  const did = "did:plc:abc";
+  const rkey = "3jzfcijpj2z2a";
+  const uri = `at://${did}/${NSID}/${rkey}`;
+  const value = {
+    $type: NSID,
+    bookId: "OL45804W",
+    title: "T",
+    authors: ["A"],
+    text: "x",
+    createdAt: "2026-01-02T03:04:05.000Z",
+  };
+  const rec = (over: Record<string, unknown> = {}) => ({
+    uri,
+    cid: "bafy",
+    value,
+    ...over,
+  });
+
+  it("puts a valid record in reviews", () => {
+    const r = rec();
+    expect(readReviews([r], did)).toEqual({
+      reviews: [{ uri, cid: "bafy", value }],
+      hidden: [],
+    });
+  });
+
+  it.each([
+    ["lexicon-invalid value", rec({ value: { $type: NSID, text: "x" } })],
+    ["bookId notabook", rec({ value: { ...value, bookId: "notabook" } })],
+    ["another DID", rec({ uri: `at://did:plc:other/${NSID}/${rkey}` })],
+    ["wrong collection", rec({ uri: `at://${did}/app.bsky.feed.post/${rkey}` })],
+    ["non-TID rkey", rec({ uri: `at://${did}/${NSID}/notatid` })],
+  ])("hides %s", (_, r) => {
+    expect(readReviews([r], did)).toEqual({ reviews: [], hidden: [r] });
+  });
+
+  it("preserves order", () => {
+    const a = rec({ uri: `at://${did}/${NSID}/3jzfcijpj2z2a` });
+    const b = rec({ uri: `at://${did}/${NSID}/3jzfcijpj2z2b` });
+    const bad = rec({ uri: `at://${did}/${NSID}/notatid` });
+    const bad2 = rec({ value: null });
+    const res = readReviews([b, bad, a, bad2], did);
+    expect(res.reviews.map((r) => r.uri)).toEqual([b.uri, a.uri]);
+    expect(res.hidden).toEqual([bad, bad2]);
+  });
+});
+
+describe("readReviews, values from other clients", () => {
+  const did = "did:plc:abc";
+  const uri = `at://${did}/${NSID}/3jzfcijpj2z2a`;
+  const value = {
+    $type: NSID,
+    bookId: "OL45804W",
+    title: "T",
+    authors: [],
+    text: "x",
+    createdAt: "2026-01-02T03:04:05.000Z",
+  };
+
+  it("hides a createdAt the lexicon accepts but Date cannot parse", () => {
+    const record = { uri, cid: "c", value: { ...value, createdAt: "20260102T030405Z" } };
+    expect(validReview(record.value)).not.toBeNull();
+    const { reviews, hidden } = readReviews([record], did);
+    expect(reviews).toEqual([]);
+    expect(hidden).toEqual([record]);
+  });
+
+  it("drops unknown fields, which might not be serializable", () => {
+    class Blob {}
+    const { reviews } = readReviews(
+      [{ uri, cid: "c", value: { ...value, rating: 3, extra: new Blob() } }],
+      did,
+    );
+    expect(reviews[0].value).toEqual({ ...value, rating: 3 });
   });
 });

@@ -1,6 +1,6 @@
 import Form from "next/form";
 import Link from "next/link";
-import { Cover } from "@/app/cover";
+import { BookCard } from "@/app/book-card";
 import { searchBooks } from "@/lib/openlibrary";
 
 export const dynamic = "force-dynamic";
@@ -37,17 +37,17 @@ export default async function Search({
             results.
           </p>
           {results.value.books.map((book) => (
-            <article className="book" key={book.id}>
-              <Cover id={book.coverId} />
-              <div className="book-body">
-                <h2>{book.title}</h2>
-                {book.authors.length > 0 && <p>{book.authors.join(", ")}</p>}
-                {book.year !== undefined && <p className="meta">{book.year}</p>}
-                <Link href={`/reviews/new?book=${book.id}`}>
-                  Review this book
-                </Link>
-              </div>
-            </article>
+            <BookCard
+              key={book.id}
+              coverId={book.coverId}
+              title={book.title}
+              authors={book.authors}
+              year={book.year}
+            >
+              <Link href={`/reviews/new?book=${book.id}`}>
+                Review this book
+              </Link>
+            </BookCard>
           ))}
         </>
       )}
